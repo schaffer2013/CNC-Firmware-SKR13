@@ -1,9 +1,9 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (c) 2020 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
- * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (c) 2011 Camiel Gubbels / Erik van der Zalm
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,64 +24,57 @@
 
 #if ENABLED(USE_CONTROLLER_FAN)
 
-#include "../module/stepper_indirection.h"
+#include "controllerfan.h"
+#include "../module/stepper.h"
 #include "../module/temperature.h"
 
-uint8_t controllerfan_speed;
+ControllerFan controllerFan;
 
-void controllerfan_update() {
-  static millis_t lastMotorOn = 0, // Last time a motor was turned on
+uint8_t ControllerFan::speed;
+
+#if ENABLED(CONTROLLER_FAN_EDITABLE)
+  controllerFan_settings_t ControllerFan::settings; // {0}
+ #else
+   const controllerFan_settings_t &ControllerFan::settings = controllerFan_defaults;
+#endif
+
+void ControllerFan::setup() {
+  SET_OUTPUT(CONTROLLER_FAN_PIN);
+  init();
+}
+
+void ControllerFan::set_fan_speed(const uint8_t s) {
+  speed = s < (CONTROLLERFAN_SPEED_MIN) ? 0 : s; // Fan OFF below minimum
+}
+
+void ControllerFan::update() {
+  static millis_t lastMotorOn = 0,    // Last time a motor was turned on
                   nextMotorCheck = 0; // Last time the state was checked
   const millis_t ms = millis();
   if (ELAPSED(ms, nextMotorCheck)) {
     nextMotorCheck = ms + 2500UL; // Not a time critical function, so only check every 2.5s
 
-    // If any of the drivers or the bed are enabled...
-    if (X_ENABLE_READ == X_ENABLE_ON || Y_ENABLE_READ == Y_ENABLE_ON || Z_ENABLE_READ == Z_ENABLE_ON
-      #if HAS_HEATED_BED
-        || thermalManager.temp_bed.soft_pwm_amount > 0
-      #endif
-        #if HAS_X2_ENABLE
-          || X2_ENABLE_READ == X_ENABLE_ON
-        #endif
-        #if HAS_Y2_ENABLE
-          || Y2_ENABLE_READ == Y_ENABLE_ON
-        #endif
-        #if HAS_Z2_ENABLE
-          || Z2_ENABLE_READ == Z_ENABLE_ON
-        #endif
-        #if HAS_Z3_ENABLE
-          || Z3_ENABLE_READ == Z_ENABLE_ON
-        #endif
-        #if E_STEPPERS
-          || E0_ENABLE_READ == E_ENABLE_ON
-          #if E_STEPPERS > 1
-            || E1_ENABLE_READ == E_ENABLE_ON
-            #if E_STEPPERS > 2
-              || E2_ENABLE_READ == E_ENABLE_ON
-              #if E_STEPPERS > 3
-                || E3_ENABLE_READ == E_ENABLE_ON
-                #if E_STEPPERS > 4
-                  || E4_ENABLE_READ == E_ENABLE_ON
-                  #if E_STEPPERS > 5
-                    || E5_ENABLE_READ == E_ENABLE_ON
-                  #endif // E_STEPPERS > 5
-                #endif // E_STEPPERS > 4
-              #endif // E_STEPPERS > 3
-            #endif // E_STEPPERS > 2
-          #endif // E_STEPPERS > 1
-        #endif // E_STEPPERS
-    ) {
-      lastMotorOn = ms; //... set time to NOW so the fan will turn on
-    }
+    // If any triggers for the controller fan are true...
+    //   - At least one stepper driver is enabled
+    //   - The heated bed is enabled
+    //   - TEMP_SENSOR_BOARD is reporting >= CONTROLLER_FAN_MIN_BOARD_TEMP
+    const ena_mask_t axis_mask = TERN(CONTROLLER_FAN_USE_Z_ONLY, _BV(Z_AXIS), ~TERN0(CONTROLLER_FAN_IGNORE_Z, _BV(Z_AXIS)));
+    if ( (stepper.axis_enabled.bits & axis_mask)
+      || TERN0(HAS_HEATED_BED, thermalManager.temp_bed.soft_pwm_amount > 0)
+      || TERN0(HAS_CONTROLLER_FAN_MIN_BOARD_TEMP, thermalManager.wholeDegBoard() >= CONTROLLER_FAN_MIN_BOARD_TEMP)
+    ) lastMotorOn = ms; //... set time to NOW so the fan will turn on
 
-    // Fan off if no steppers have been enabled for CONTROLLERFAN_SECS seconds
-    uint8_t speed = (!lastMotorOn || ELAPSED(ms, lastMotorOn + (CONTROLLERFAN_SECS) * 1000UL)) ? 0 : CONTROLLERFAN_SPEED;
-    controllerfan_speed = speed;
+    // Fan Settings. Set fan > 0:
+    //  - If AutoMode is on and steppers have been enabled for CONTROLLERFAN_IDLE_TIME seconds.
+    //  - If System is on idle and idle fan speed settings is activated.
+    set_fan_speed(
+      settings.auto_mode && lastMotorOn && PENDING(ms, lastMotorOn + SEC_TO_MS(settings.duration))
+      ? settings.active_speed : settings.idle_speed
+    );
 
-    // allows digital or PWM fan output to be used (see M42 handling)
+    // Allow digital or PWM fan output (see M42 handling)
     WRITE(CONTROLLER_FAN_PIN, speed);
-    analogWrite(CONTROLLER_FAN_PIN, speed);
+    analogWrite(pin_t(CONTROLLER_FAN_PIN), speed);
   }
 }
 

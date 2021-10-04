@@ -7,7 +7,7 @@
  * for free and use it as they wish, with or without modifications, and in
  * any context, commercially or otherwise. The only limitation is that I
  * don't guarantee that the software is fit for any purpose or accept any
- * liability for it's use or misuse - this software is without warranty.
+ * liability for its use or misuse - this software is without warranty.
  ***************************************************************************
  * File Description: Abstract interpreter for ARM mode.
  **************************************************************************/
@@ -43,10 +43,9 @@ static bool isDataProc(uint32_t instr) {
 }
 
 UnwResult UnwStartArm(UnwState * const state) {
-  bool found = false;
   uint16_t   t = UNW_MAX_INSTR_COUNT;
 
-  do {
+  for (;;) {
     uint32_t instr;
 
     /* Attempt to read the instruction */
@@ -124,13 +123,11 @@ UnwResult UnwStartArm(UnwState * const state) {
 
     /* MRS */
     else if ((instr & 0xFFBF0FFF) == 0xE10F0000) {
+      uint8_t rd = (instr & 0x0000F000) >> 12;
       #ifdef UNW_DEBUG
         const bool R = !!(instr & 0x00400000);
-      #else
-        constexpr bool R = false;
+        UnwPrintd4("MRS r%d,%s\t; r%d invalidated", rd, R ? "SPSR" : "CPSR", rd);
       #endif
-      uint8_t rd = (instr & 0x0000F000) >> 12;
-      UnwPrintd4("MRS r%d,%s\t; r%d invalidated", rd, R ? "SPSR" : "CPSR", rd);
 
       /* Status registers untracked */
       state->regData[rd].o = REG_VAL_INVALID;
@@ -529,7 +526,7 @@ UnwResult UnwStartArm(UnwState * const state) {
 
     if (--t == 0) return UNWIND_EXHAUSTED;
 
-  } while (!found);
+  }
 
   return UNWIND_UNSUPPORTED;
 }

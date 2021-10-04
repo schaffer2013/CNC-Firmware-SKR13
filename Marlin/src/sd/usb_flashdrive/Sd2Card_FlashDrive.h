@@ -1,9 +1,9 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2019 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (c) 2020 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
- * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (c) 2011 Camiel Gubbels / Erik van der Zalm
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,82 +16,65 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 #pragma once
 
 /**
  * \file
- * \brief Sd2Card class for V2 SD/SDHC cards
+ * \brief Sd2Card class for USB Flash Drive
  */
-
-/* Uncomment USB_DEBUG to enable debugging.
- *    1 - basic debugging and bounds checking
- *    2 - print each block access
- */
-//#define USB_DEBUG 1
-
 #include "../SdFatConfig.h"
 #include "../SdInfo.h"
+#include "../disk_io_driver.h"
 
-/**
- * define SOFTWARE_SPI to use bit-bang SPI
- */
-#if MEGA_SOFT_SPI || USE_SOFTWARE_SPI
-  #define SOFTWARE_SPI
+#if DISABLED(USE_OTG_USB_HOST)
+  /**
+   * Define SOFTWARE_SPI to use bit-bang SPI
+   */
+  #if EITHER(MEGA_SOFT_SPI, USE_SOFTWARE_SPI)
+    #define SOFTWARE_SPI
+  #endif
+
+  // SPI pin definitions - do not edit here - change in SdFatConfig.h
+  #if ENABLED(SOFTWARE_SPI)
+    #warning "Auto-assigning '10' as the SD_CHIP_SELECT_PIN."
+    #define SD_CHIP_SELECT_PIN  10                // Software SPI chip select pin for the SD
+  #else
+    // hardware pin defs
+    #define SD_CHIP_SELECT_PIN  SD_SS_PIN         // The default chip select pin for the SD card is SS.
+  #endif
 #endif
 
-// SPI pin definitions - do not edit here - change in SdFatConfig.h
-#if DISABLED(SOFTWARE_SPI)
-  // hardware pin defs
-  #define SD_CHIP_SELECT_PIN  SS_PIN            // The default chip select pin for the SD card is SS.
-  // The following three pins must not be redefined for hardware SPI.
-  #define SPI_MOSI_PIN        MOSI_PIN          // SPI Master Out Slave In pin
-  #define SPI_MISO_PIN        MISO_PIN          // SPI Master In Slave Out pin
-  #define SPI_SCK_PIN         SCK_PIN           // SPI Clock pin
-#else  // SOFTWARE_SPI
-  #define SD_CHIP_SELECT_PIN  SOFT_SPI_CS_PIN   // SPI chip select pin
-  #define SPI_MOSI_PIN        SOFT_SPI_MOSI_PIN // SPI Master Out Slave In pin
-  #define SPI_MISO_PIN        SOFT_SPI_MISO_PIN // SPI Master In Slave Out pin
-  #define SPI_SCK_PIN         SOFT_SPI_SCK_PIN  // SPI Clock pin
-#endif // SOFTWARE_SPI
-
-class Sd2Card {
+class DiskIODriver_USBFlash : public DiskIODriver {
   private:
-
-    typedef enum : uint8_t {
-      USB_HOST_UNINITIALIZED,
-      USB_HOST_INITIALIZED,
-      USB_HOST_DELAY_INIT,
-      USB_HOST_WAITING
-    } state_t;
-
-    static state_t state;
-
     uint32_t pos;
-    #ifdef USB_DEBUG
-      uint32_t lun0_capacity;
-    #endif
 
-    static inline bool ready() { return state == USB_HOST_INITIALIZED; }
+    static void usbStateDebug();
 
   public:
-    bool init(const uint8_t sckRateID=0, const pin_t chipSelectPin=SD_CHIP_SELECT_PIN);
-
-    static void idle();
-
-    inline bool readStart(const uint32_t block)                             { pos = block; return ready(); }
-    inline bool readData(uint8_t* dst)                                      { return readBlock(pos++, dst); }
-    inline bool readStop() const                                            { return true; }
-
-    inline bool writeStart(const uint32_t block, const uint32_t eraseCount) { UNUSED(eraseCount); pos = block; return ready(); }
-    inline bool writeData(uint8_t* src)                                     { return writeBlock(pos++, src); }
-    inline bool writeStop() const                                           { return true; }
-
-    bool readBlock(uint32_t block, uint8_t* dst);
-    bool writeBlock(uint32_t blockNumber, const uint8_t* src);
-
-    uint32_t cardSize();
+    static bool usbStartup();
     static bool isInserted();
+
+    bool init(const uint8_t sckRateID=0, const pin_t chipSelectPin=TERN(USE_OTG_USB_HOST, 0, SD_CHIP_SELECT_PIN)) override;
+
+    inline bool readCSD(csd_t*)                                  override { return true; }
+
+    inline bool readStart(const uint32_t block)                  override { pos = block; return isReady(); }
+    inline bool readData(uint8_t *dst)                           override { return readBlock(pos++, dst); }
+    inline bool readStop()                                       override { return true; }
+
+    inline bool writeStart(const uint32_t block, const uint32_t) override { pos = block; return isReady(); }
+    inline bool writeData(const uint8_t *src)                    override { return writeBlock(pos++, src); }
+    inline bool writeStop()                                      override { return true; }
+
+    bool readBlock(uint32_t block, uint8_t *dst) override;
+    bool writeBlock(uint32_t blockNumber, const uint8_t *src) override;
+
+    uint32_t cardSize() override;
+
+    bool isReady() override;
+
+    void idle() override;
 };
