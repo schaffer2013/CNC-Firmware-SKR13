@@ -25,7 +25,9 @@
  * Cohesion3D Mini pin assignments
  */
 
-#include "env_validate.h"
+#ifndef MCU_LPC1769
+  #error "Oops! Make sure you have the LPC1769 environment selected in your IDE."
+#endif
 
 #define BOARD_INFO_NAME "Cohesion3D Mini"
 
@@ -139,7 +141,7 @@
 // connector are shared with the onboard SD card, and Marlin does not support reading
 // G-code files from the onboard SD card.
 //
-#if HAS_WIRED_LCD
+#if HAS_SPI_LCD
 
   #define BEEPER_PIN                       P0_27  // EXP2-7 - open drain
 
@@ -158,7 +160,7 @@
     #error "SDSUPPORT is not currently supported by the Cohesion3D boards"
   #endif
 
-#endif // HAS_WIRED_LCD
+#endif // HAS_SPI_LCD
 
 //
 // Ethernet pins

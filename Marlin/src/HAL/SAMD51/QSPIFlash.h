@@ -24,7 +24,9 @@
  * THE SOFTWARE.
  *
  * Derived from Adafruit_SPIFlash class with no SdFat references
+ *
  */
+
 #pragma once
 
 #include <Adafruit_SPIFlashBase.h>

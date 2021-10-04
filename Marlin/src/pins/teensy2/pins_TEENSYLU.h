@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.   If not, see <https://www.gnu.org/licenses/>.
+ *
  */
-#pragma once
 
 /**
  *  Rev C  2 JUN 2017
@@ -73,10 +73,7 @@
   *  The pin assignments in this file match the silkscreen.
   */
 
-#define ALLOW_AT90USB1286P
-#include "env_validate.h"
-
-#if NOT_TARGET(__AVR_AT90USB1286__, __AVR_AT90USB1286P__)
+#if !defined(__AVR_AT90USB1286__) && !defined(__AVR_AT90USB1286P__)
   #error "Oops! Select 'Teensy++ 2.0' or 'Printrboard' in 'Tools > Board.'"
 #endif
 
@@ -145,7 +142,7 @@
 //
 // LCD / Controller
 //
-#if IS_ULTRA_LCD && IS_NEWPANEL
+#if BOTH(ULTRA_LCD, NEWPANEL)
 
   #define BEEPER_PIN                          -1
 
@@ -158,7 +155,7 @@
 
   #define SD_DETECT_PIN                       -1
 
-#endif // IS_ULTRA_LCD && IS_NEWPANEL
+#endif // HAS_SPI_LCD && NEWPANEL
 
 //
 // M3/M4/M5 - Spindle/Laser Control

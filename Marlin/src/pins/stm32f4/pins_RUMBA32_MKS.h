@@ -46,6 +46,8 @@
   #define FLASH_EEPROM_LEVELING
 #endif
 
+#define ENABLE_SPI1
+
 #include "pins_RUMBA32_common.h"
 
 #if HAS_TMC_UART
@@ -55,7 +57,7 @@
    * Hardware serial communication ports.
    * If undefined software serial is used according to the pins below
    */
-  //#define X_HARDWARE_SERIAL  Serial1
+  //#define X_HARDWARE_SERIAL  Serial
   //#define X2_HARDWARE_SERIAL Serial1
   //#define Y_HARDWARE_SERIAL  Serial1
   //#define Y2_HARDWARE_SERIAL Serial1
@@ -67,6 +69,9 @@
   //#define E3_HARDWARE_SERIAL Serial1
   //#define E4_HARDWARE_SERIAL Serial1
 
+  //
+  // Software serial
+  //
   #define X_SERIAL_TX_PIN                   PA3
   #define X_SERIAL_RX_PIN                   PC14
 

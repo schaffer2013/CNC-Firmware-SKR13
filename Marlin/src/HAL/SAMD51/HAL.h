@@ -32,56 +32,61 @@
   #include "MarlinSerial_AGCM4.h"
 
   // Serial ports
-  typedef ForwardSerial1Class< decltype(Serial) > DefaultSerial1;
-  typedef ForwardSerial1Class< decltype(Serial1) > DefaultSerial2;
-  typedef ForwardSerial1Class< decltype(Serial2) > DefaultSerial3;
-  typedef ForwardSerial1Class< decltype(Serial3) > DefaultSerial4;
-  typedef ForwardSerial1Class< decltype(Serial4) > DefaultSerial5;
-  extern DefaultSerial1 MSerial0;
-  extern DefaultSerial2 MSerial1;
-  extern DefaultSerial3 MSerial2;
-  extern DefaultSerial4 MSerial3;
-  extern DefaultSerial5 MSerial4;
 
-  #define __MSERIAL(X) MSerial##X
-  #define _MSERIAL(X) __MSERIAL(X)
-  #define MSERIAL(X) _MSERIAL(INCREMENT(X))
+  // MYSERIAL0 required before MarlinSerial includes!
 
   #if SERIAL_PORT == -1
-    #define MYSERIAL1 MSerial0
-  #elif WITHIN(SERIAL_PORT, 0, 3)
-    #define MYSERIAL1 MSERIAL(SERIAL_PORT)
+    #define MYSERIAL0 Serial
+  #elif SERIAL_PORT == 0
+    #define MYSERIAL0 Serial1
+  #elif SERIAL_PORT == 1
+    #define MYSERIAL0 Serial2
+  #elif SERIAL_PORT == 2
+    #define MYSERIAL0 Serial3
+  #elif SERIAL_PORT == 3
+    #define MYSERIAL0 Serial4
   #else
-    #error "SERIAL_PORT must be from 0 to 3. You can also use -1 if the board supports Native USB."
+    #error "SERIAL_PORT must be from -1 to 3. Please update your configuration."
   #endif
 
   #ifdef SERIAL_PORT_2
-    #if SERIAL_PORT_2 == -1
-      #define MYSERIAL2 MSerial0
-    #elif WITHIN(SERIAL_PORT_2, 0, 3)
-      #define MYSERIAL2 MSERIAL(SERIAL_PORT_2)
+    #if SERIAL_PORT_2 == SERIAL_PORT
+      #error "SERIAL_PORT_2 must be different than SERIAL_PORT. Please update your configuration."
+    #elif SERIAL_PORT_2 == -1
+      #define MYSERIAL1 Serial
+    #elif SERIAL_PORT_2 == 0
+      #define MYSERIAL1 Serial1
+    #elif SERIAL_PORT_2 == 1
+      #define MYSERIAL1 Serial2
+    #elif SERIAL_PORT_2 == 2
+      #define MYSERIAL1 Serial3
+    #elif SERIAL_PORT_2 == 3
+      #define MYSERIAL1 Serial4
     #else
-      #error "SERIAL_PORT_2 must be from 0 to 3. You can also use -1 if the board supports Native USB."
+      #error "SERIAL_PORT_2 must be from -1 to 3. Please update your configuration."
     #endif
+    #define NUM_SERIAL 2
+  #else
+    #define NUM_SERIAL 1
   #endif
 
-  #ifdef MMU2_SERIAL_PORT
-    #if MMU2_SERIAL_PORT == -1
-      #define MMU2_SERIAL MSerial0
-    #elif WITHIN(MMU2_SERIAL_PORT, 0, 3)
-      #define MMU2_SERIAL MSERIAL(MMU2_SERIAL_PORT)
+  #ifdef DGUS_SERIAL_PORT
+    #if DGUS_SERIAL_PORT == SERIAL_PORT
+      #error "DGUS_SERIAL_PORT must be different than SERIAL_PORT. Please update your configuration."
+    #elif defined(SERIAL_PORT_2) && DGUS_SERIAL_PORT == SERIAL_PORT_2
+      #error "DGUS_SERIAL_PORT must be different than SERIAL_PORT_2. Please update your configuration."
+    #elif DGUS_SERIAL_PORT == -1
+      #define DGUS_SERIAL Serial
+    #elif DGUS_SERIAL_PORT == 0
+      #define DGUS_SERIAL Serial1
+    #elif DGUS_SERIAL_PORT == 1
+      #define DGUS_SERIAL Serial2
+    #elif DGUS_SERIAL_PORT == 2
+      #define DGUS_SERIAL Serial3
+    #elif DGUS_SERIAL_PORT == 2
+      #define DGUS_SERIAL Serial4
     #else
-      #error "MMU2_SERIAL_PORT must be from 0 to 3. You can also use -1 if the board supports Native USB."
-    #endif
-  #endif
-
-  #ifdef LCD_SERIAL_PORT
-    #if LCD_SERIAL_PORT == -1
-      #define LCD_SERIAL MSerial0
-    #elif WITHIN(LCD_SERIAL_PORT, 0, 3)
-      #define LCD_SERIAL MSERIAL(LCD_SERIAL_PORT)
-    #else
-      #error "LCD_SERIAL_PORT must be from 0 to 3. You can also use -1 if the board supports Native USB."
+      #error "DGUS_SERIAL_PORT must be from -1 to 3. Please update your configuration."
     #endif
   #endif
 
@@ -106,8 +111,6 @@ typedef int8_t pin_t;
 
 void HAL_clear_reset_source();  // clear reset reason
 uint8_t HAL_get_reset_source(); // get reset reason
-
-void HAL_reboot();
 
 //
 // ADC
@@ -153,16 +156,10 @@ void HAL_idletask();
 //
 FORCE_INLINE void _delay_ms(const int delay_ms) { delay(delay_ms); }
 
-#if GCC_VERSION <= 50000
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 int freeMemory();
-
-#if GCC_VERSION <= 50000
-  #pragma GCC diagnostic pop
-#endif
+#pragma GCC diagnostic pop
 
 #ifdef __cplusplus
   extern "C" {

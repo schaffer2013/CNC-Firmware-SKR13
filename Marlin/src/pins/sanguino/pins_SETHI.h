@@ -47,10 +47,12 @@
  * Just use the above JSON URL instead of Sparkfun's JSON.
  *
  * Once installed select the Sanguino board and then select the CPU.
+ *
  */
 
-#define ALLOW_MEGA644
-#include "env_validate.h"
+#if !defined(__AVR_ATmega644P__) && !defined(__AVR_ATmega644__) && !defined(__AVR_ATmega1284P__)
+  #error "Oops! Select 'Sanguino' in 'Tools > Boards' and 'ATmega644', 'ATmega644P', or 'ATmega1284P' in 'Tools > Processor.'"
+#endif
 
 #define BOARD_INFO_NAME "Sethi 3D_1"
 

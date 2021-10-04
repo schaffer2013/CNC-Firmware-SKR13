@@ -63,9 +63,11 @@
  *   4. The programmer is no longer needed. Remove it.
  */
 
-#include "env_validate.h"
+#ifndef __AVR_AT90USB1286__
+  #error "Oops! Select 'Teensy++ 2.0' or 'Printrboard' in 'Tools > Board.'"
+#endif
 
-#if !defined(__MARLIN_DEPS__) && !defined(USBCON)
+#ifndef USBCON
   #error "USBCON should be defined by the platform for this board."
 #endif
 
@@ -141,7 +143,7 @@
 #endif // NO_EXTRUDRBOARD
 
 // Enable control of stepper motor currents with the I2C based MCP4728 DAC used on Printrboard REVF
-#define HAS_MOTOR_CURRENT_DAC 1
+#define DAC_STEPPER_CURRENT
 
 // Set default drive strength percents if not already defined - X, Y, Z, E axis
 #ifndef DAC_MOTOR_CURRENT_DEFAULT
@@ -199,7 +201,7 @@
 //
 //#define USE_INTERNAL_SD
 
-#if HAS_WIRED_LCD
+#if HAS_SPI_LCD
   #define LCD_PINS_RS                          9  // E1       JP11-11
   #define LCD_PINS_ENABLE                      8  // E0       JP11-10
   #define LCD_PINS_D4                          7  // D7       JP11-8
@@ -245,9 +247,9 @@
     //#define MISO                            23  //         13               B3                ICSP-06             EXP2-05
 
     // Alter timing for graphical display
-    #define BOARD_ST7920_DELAY_1           313
-    #define BOARD_ST7920_DELAY_2           313
-    #define BOARD_ST7920_DELAY_3           313
+    #define BOARD_ST7920_DELAY_1 DELAY_NS(313)
+    #define BOARD_ST7920_DELAY_2 DELAY_NS(313)
+    #define BOARD_ST7920_DELAY_3 DELAY_NS(313)
 
   #else
 
